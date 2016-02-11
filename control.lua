@@ -13,11 +13,13 @@ function setup()
 	global.surface_associations = global.surface_associations or {}
 	global.Underground_driving_players = global.Underground_driving_players or {}
 	global.time_spent_dict = global.time_spent_dict or {}
+	global.borers = global.borers or {}
 
 	-- move to where I create the first entrance ?
 	global.onTickFunctions["teleportation_check"] = teleportation_check
 	global.onTickFunctions["move_items"] = move_items
 	global.onTickFunctions["pollution_moving"] = pollution_moving
+	global.onTickFunctions["borer_control"] = borer_control
 
 	--global.onTickFunctions["debug"] = debug
 end
@@ -41,8 +43,8 @@ script.on_event(defines.events.on_player_driving_changed_state, function(event) 
 --script.on_event(defines.events.on_player_created,  function (event) startingItems(game.get_player(event.player_index)) end)
 
 
-script.on_event(defines.events.on_tick, 
-	function(event) 
+script.on_event(defines.events.on_tick,
+	function(event)
 		for name,fun in pairs(global.onTickFunctions) do
 			--we pass the name to the function so it can delete itself if it wants to, the function does not remember its own name to prevent closures
 			if type(fun) == "function" then fun(name) end
@@ -75,14 +77,14 @@ function debug(function_name)
 	gpp(string)
 
 	--gpp("chunk position : " .. top_left .. "-" ..top_center .. "-" ..top_right .. " | " .. center_left .. "-" ..center_center .. "-" ..center_right .. " | " .. bottom_left .. "-" ..bottom_center .. "-" ..bottom_right)
-	
+
 	return true
 end
 
 function on_player_driving_changed_state(event)
 	local player = game.players[event.player_index]
 	if is_subsurface(player.surface) then
-		if player.driving then 
+		if player.driving then
 			global.Underground_driving_players[event.player_index] = player
 
 			global.onTickFunctions["boring"] = boring
@@ -99,7 +101,7 @@ end
 function boring(function_name)
 	for _,player in pairs(global.Underground_driving_players) do
 		for _,entity in ipairs(player.surface.find_entities(get_area(player.position, 10))) do
-			if entity.type == "decorative" then 
+			if entity.type == "decorative" then
 				entity.destroy()
 			end
 		end
@@ -115,10 +117,10 @@ function boring(function_name)
 			local walls_dug = clear_subsurface(surface, center_small_excavation, 1, nil)
 			walls_dug = walls_dug + clear_subsurface(surface, center_big_excavation, 2, nil)
 
-			if walls_dug > 0 then 
+			if walls_dug > 0 then
 				local stack = {name = "stone", count = 2 * walls_dug}
-				local actually_inserted = player.vehicle.insert(stack) 
-				if actually_inserted ~= stack.count then 
+				local actually_inserted = player.vehicle.insert(stack)
+				if actually_inserted ~= stack.count then
 					stack.count = stack.count - actually_inserted
 					surface.spill_item_stack(player.vehicle.position, stack)
 				end
@@ -150,7 +152,7 @@ function pollution_moving(function_name)
 					max_movable_pollution = current_energy / max_energy * max_pollution_move_active -- how much polution can be moved with the current available
 
 					local pollution_to_move = subsurface.get_pollution(entity.position)
-					if pollution_to_move > max_movable_pollution then 
+					if pollution_to_move > max_movable_pollution then
 						pollution_to_move = max_movable_pollution
 					end
 					entity.energy = entity.energy - ((pollution_to_move / max_pollution_move_active)*max_energy)
@@ -245,7 +247,7 @@ function teleportation_check(function_name)
 				if not player.walking_state.walking then -- only transport a non walking player
 					local position = player.position
 					local search_area = {left_top = {x = position.x - 0.5, y = position.y - 0.5}, right_bottom = {x = position.x + 0.5, y = position.y + 0.5}}
-					
+
 					local entities = player.surface.find_entities(search_area)
 
 					for _,entity in ipairs(entities) do -- if there is an entrance close by
@@ -270,10 +272,10 @@ end
 function get_player_elevator_linked_to(entity)
 
 	for _, elevator_association in pairs(global.elevator_association) do
-		if entity == elevator_association.surface_elevator.player_elevator then 
+		if entity == elevator_association.surface_elevator.player_elevator then
 			return elevator_association.subsurface_elevator.player_elevator
 		end
-		if entity == elevator_association.subsurface_elevator.player_elevator then 
+		if entity == elevator_association.subsurface_elevator.player_elevator then
 			return elevator_association.surface_elevator.player_elevator
 		end
 	end
@@ -298,7 +300,7 @@ function temp_teleportation_check(fct_name)
 
 			if time_spent >= teleportation_time then
 				local destination_surface = data.destination_entity.surface
-				-- add to the distance 
+				-- add to the distance
 				player.teleport(get_safe_position(data.destination_entity.position, player.position),destination_surface)
 				stop_teleportation = true
 
@@ -309,7 +311,7 @@ function temp_teleportation_check(fct_name)
 					air_bar_container.add{type="label", name="airbar_label", caption = "air left : "}
 					air_bar_container.add{type="progressbar", name="airbar", size = 120}
 					air_bar_container.airbar.value = 1
-					global.underground_players[player.name] = {player = player, gui_element = air_bar_container}	
+					global.underground_players[player.name] = {player = player, gui_element = air_bar_container}
 					global.onTickFunctions["pollution_killing_subsurface"] = pollution_killing_subsurface
 				end
 
@@ -339,13 +341,13 @@ function on_tick_drilling(function_name)
 	for key, drilling_data in pairs(global.surface_drillers) do
 		if drilling_data.drilling_performed ~= drillings_needed then -- if the drillings are not over
 			-- floating text drilling state
-			if drilling_data.last_crafting_progress == drilling_data.entity.crafting_progress and drilling_data.state_active then 
+			if drilling_data.last_crafting_progress == drilling_data.entity.crafting_progress and drilling_data.state_active then
 				drilling_data.state_active = false
 				local desc = drilling_data.entity.surface.create_entity{
 	                name='custom-flying-text',
 	                position={x = drilling_data.entity.position.x -1.7,y = drilling_data.entity.position.y -1.5},
 	                force=drilling_data.entity.force,
-	                text="drilling paused" 
+	                text="drilling paused"
 	                }
 				desc.active = false
 				drilling_data.description_floating_text.destroy()
@@ -356,7 +358,7 @@ function on_tick_drilling(function_name)
 	                name='custom-flying-text',
 	                position={x = drilling_data.entity.position.x -2.2,y = drilling_data.entity.position.y -1.5},
 	                force=drilling_data.entity.force,
-	                text="drilling in progress" 
+	                text="drilling in progress"
 	                }
 				desc.active = false
 				drilling_data.description_floating_text.destroy()
@@ -365,7 +367,7 @@ function on_tick_drilling(function_name)
 
 			-- floating text progress %
 			local new_progress = (drilling_data.drilling_performed + drilling_data.last_crafting_progress) /drillings_needed *100
-			if new_progress ~= drilling_data.progress then 
+			if new_progress ~= drilling_data.progress then
 				drilling_data.progress = new_progress
 				local progress = drilling_data.entity.surface.create_entity{
 	                name='custom-flying-text',
@@ -392,7 +394,7 @@ function on_tick_drilling(function_name)
 	                name='custom-flying-text',
 	                position={x = drilling_data.entity.position.x -1.8,y = drilling_data.entity.position.y -1.5},
 	                force=drilling_data.entity.force,
-	                text="stabilizing hole" 
+	                text="stabilizing hole"
 	                }
 				desc.active = false
 				drilling_data.description_floating_text.destroy()
@@ -421,7 +423,7 @@ function on_tick_drilling(function_name)
 
 		    	local count = 0
   				for _ in pairs(global.surface_drillers) do count = count + 1 end
-				if count == 0 then 
+				if count == 0 then
 					global.onTickFunctions[function_name] = nil
 				end
 		    end
@@ -500,9 +502,9 @@ function place_surface_elevator(_surface, _subsurface, _position, _force)
 	surface_linked_belt_left.direction   = defines.direction.west
 
 
-	
+
 	local subsurface_player_elevator = _subsurface.create_entity{name = "tunnel-exit", position = _position, force=_force}
-	
+
 	local subsurface_linked_belt_bottom = _subsurface.create_entity{name = "fast-transport-belt", position = {x = _position.x, y = _position.y + 1}, force=_force}
 	local subsurface_linked_belt_top    = _subsurface.create_entity{name = "fast-transport-belt", position = {x = _position.x, y = _position.y - 1}, force=_force}
 	local subsurface_linked_belt_right  = _subsurface.create_entity{name = "fast-transport-belt", position = {x = _position.x + 1, y = _position.y}, force=_force}
@@ -546,13 +548,13 @@ function place_surface_elevator(_surface, _subsurface, _position, _force)
 		belt.destructible = false
 		belt.minable = false
 		belt.rotatable = false
-	end	
+	end
 	for _,belt in ipairs(elevator_assoc.subsurface_elevator.items_elevators) do
 		belt.destructible = false
 		belt.minable = false
 		belt.rotatable = false
 	end
-	
+
 	-- linking electricity
 	surface_player_elevator.connect_neighbour(subsurface_player_elevator)
 	surface_player_elevator.connect_neighbour{wire = defines.circuitconnector.red,   target_entity = subsurface_player_elevator}
@@ -567,7 +569,7 @@ function remove_surface_player_elevator(_entity, _player) -- _player is the play
 
 
 	-- find corresponding elevator
-	local current_association = global.elevator_association[string.format("%s&%s@{%d,%d}", surface_name, subsurface_name, position.x, position.y)] 
+	local current_association = global.elevator_association[string.format("%s&%s@{%d,%d}", surface_name, subsurface_name, position.x, position.y)]
 	if not current_association then -- surface_name and subsurface_name are inverted
 		local temp = surface_name
 		surface_name = subsurface_name
@@ -597,7 +599,7 @@ function remove_surface_player_elevator(_entity, _player) -- _player is the play
 
 	global.elevator_association[string.format("%s&%s@{%d,%d}", surface_name, subsurface_name, position.x, position.y)] = nil
 end
-		    	
+
 
 -- if the chunk generated is a chunk of the tunnels, change all tiles to out_of-map tiles (-> not accessible and not on the map)
 function on_chunk_generated(event)
@@ -639,7 +641,7 @@ function on_pre_mined_item(event)
 
 		local count = 0
 		for _ in pairs(global.surface_drillers) do count = count + 1 end
-		if count == 0 then 
+		if count == 0 then
 			global.onTickFunctions["drilling"] = nil
 		end
 
@@ -647,14 +649,14 @@ function on_pre_mined_item(event)
 
 	elseif entity.name == "active-air-vent" or entity.name == "air-vent" then
 		global.air_vents[string.format("%s@{%d,%d}", entity.surface.name, entity.position.x, entity.position.y)] = nil
-	
+
 	end
 end
 
 -- when a building is built
 function on_built_entity(event)
 	local entity = event.created_entity
-	
+
 	if entity.name == "surface-driller" then
 		local subsurface = get_subsurface(entity.surface)
 		local chunk_position = to_chunk_position(entity.position)
@@ -679,7 +681,7 @@ function on_built_entity(event)
 
 		global.surface_drillers[string.format("%s@{%d,%d}", entity.surface.name, entity.position.x, entity.position.y)] = {entity = entity, drilling_performed = 0, last_crafting_progress = 0, description_floating_text = desc, progression_floating_text = progress, state_active = false, progress = 0}
 		global.onTickFunctions["drilling"] = on_tick_drilling
-		
+
 	elseif entity.name == "active-air-vent" or entity.name == "air-vent" then
 
 		-- generate chunk in the subsurface (just in case)
@@ -689,11 +691,13 @@ function on_built_entity(event)
 
 		global.air_vents[string.format("%s@{%d,%d}", entity.surface.name, entity.position.x, entity.position.y)] = {entity = entity, active = false}
 		entity.operable = false
+	elseif entity.name == "mini-borer" then
+		table.insert(global.borers,entity)
 	end
 end
 
 function clear_subsurface(_surface, _position, _digging_radius, _clearing_radius)
-	if _digging_radius < 1 then return nil end -- min _digging_radius is 1 
+	if _digging_radius < 1 then return nil end -- min _digging_radius is 1
 
 	local digging_subsurface_area = get_area(_position, _digging_radius - 1)
 	local new_tiles = {}
@@ -706,16 +710,16 @@ function clear_subsurface(_surface, _position, _digging_radius, _clearing_radius
 			else
 				entity.teleport(get_safe_position(_position, {x=_position.x + _clearing_radius, y = _position.y}))
 			end
-		end 
+		end
 	end
 	local walls_destroyed = 0
 	for x, y in iarea(digging_subsurface_area) do
 		if _surface.get_tile(x, y).name ~= cavern_Ground_name then
 			table.insert(new_tiles, {name = cavern_Ground_name, position = {x, y}})
 		end
-		
+
 		local wall = _surface.find_entity(cavern_Wall_name, {x = x, y = y})
-		if wall then 
+		if wall then
 			wall.destroy()
 			walls_destroyed = walls_destroyed + 1
 		else
@@ -731,6 +735,18 @@ function clear_subsurface(_surface, _position, _digging_radius, _clearing_radius
 	return walls_destroyed
 end
 
+function borer_control()
+ for i, e in pairs(global.borers) do
+		local fuel_tank = e.get_inventory(defines.inventory.fuel)
+		if fuel_tank[1].valid_for_read == true then
+		 	if fuel_tank[1].count > 0 then
+				e.speed = 1
+				game.player.print(tostring(e.get_item_count("coal")))
+				e.remove_item {name="coal",count = 1}
+			end
+		end
+	end
+end
 
 
 
