@@ -2,7 +2,7 @@ require("_tools.prototypes.debug")
 
 -- entity
 require("prototypes.entity.entities")
-require("prototypes.entity.mini-borer.lua")
+require("prototypes.entity.mini-borer")
 
 -- items
 require("prototypes.item.items")
