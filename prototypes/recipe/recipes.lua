@@ -19,7 +19,7 @@ data:extend(
       {"iron-plate", 2},
     },
     result = "air-vent"
-  }, 
+  },
   {
     type = "recipe",
     name = "active-air-vent",
@@ -44,7 +44,7 @@ data:extend(
       {type="item", name="stone", amount=50}
     }
   },
-{
+  {
     type = "recipe",
     name = "mobile-borer",
     enabled = true,
@@ -53,6 +53,15 @@ data:extend(
       {"iron-plate", 2},
     },
     result = "mobile-borer"
-  }, 
- })
- 
+  },
+  {
+    type = "recipe",
+    name = "mini-borer",
+    enabled = true,
+    ingredients =
+    {
+      {"iron-plate", 2},
+    },
+    result = "mini-borer"
+  },
+})
