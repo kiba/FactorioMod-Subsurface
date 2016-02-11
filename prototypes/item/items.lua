@@ -40,5 +40,15 @@ data:extend(
     place_result = "mobile-borer",
     stack_size = 1
   },
+  {
+    type = "item",
+    name = "mini-borer",
+    icon = "__base__/graphics/icons/car.png",
+    flags = {"goes-to-quickbar"},
+    subgroup = "transport",
+    order = "b[personal-transport]-a[car]",
+    place_result = "mini-borer",
+    stack_size = 1
+  },
 
 })
