@@ -650,6 +650,17 @@ function on_pre_mined_item(event)
 	elseif entity.name == "active-air-vent" or entity.name == "air-vent" then
 		global.air_vents[string.format("%s@{%d,%d}", entity.surface.name, entity.position.x, entity.position.y)] = nil
 
+	elseif entity.name == "mini-borer" then
+		local mPos = entity["position"]
+		local count = 1
+		for i,e in pairs(global.borers) do
+			local pos = e["position"]
+			if pos.x == mPos.x and pos.y == mPos.y then
+				break
+			end
+			count = count + 1
+		end
+		table.remove(global.borers,count)
 	end
 end
 
