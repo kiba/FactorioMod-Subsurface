@@ -137,14 +137,44 @@ function boring(function_name)
 	end
 end
 
---[[Could go with the boring function, but without knowing how it all works, likely to mess up integration. For now, let duplicate the boring function of the player]]
+--[[Could go with the boring function, but without knowing how it all works, likely to mess up integration. For now, let duplicate the boring function of the player. WILL DRY LATER]]
 
 function machineBoring()
 	for i,m in pairs(global.borers) do
 		local borer = m["borer"]
-		for _,entity in ipairs(borer.surface.find_entities(get_area(borer.position,10))) do
-			if entity.type == "decorative" then
-				entity.destroy()
+		if is_subsurface(borer.surface) == true then
+
+			for _,entity in ipairs(borer.surface.find_entities(get_area(borer.position,10))) do
+				if entity.type == "decorative" then
+					entity.destroy()
+				end
+			end
+			local surface = borer.surface
+			local vehicule_orientation = borer.orientation
+
+			local driller_colision_box = borer.prototype.collision_box
+			local center_big_excavation = move_towards_continuous(borer.position, vehicule_orientation, -driller_colision_box.left_top.y)
+			local center_small_excavation = move_towards_continuous(center_big_excavation, vehicule_orientation, 1.7)
+			local speed_test_position = move_towards_continuous(center_small_excavation, vehicule_orientation, 1.5)
+
+			local walls_dug = clear_subsurface(surface, center_small_excavation, 1, nil)
+			walls_dug = walls_dug + clear_subsurface(surface, center_big_excavation, 2, nil)
+
+			if walls_dug > 0 then
+				local stack = {name = "stone", count = 2 * walls_dug}
+				local actually_inserted = borer.insert(stack)
+				if actually_inserted ~= stack.count then
+					stack.count = stack.count - actually_inserted
+					surface.spill_item_stack(borer.position, stack)
+				end
+			end
+
+			local speed_test_tile = surface.get_tile(speed_test_position.x, speed_test_position.y)
+			if borer.friction_modifier ~= 4 and borer.speed >0 and (speed_test_tile.name == "out-of-map" or speed_test_tile.name == "cave-walls") then
+				borer.friction_modifier = 4
+			end
+			if borer.friction_modifier ~= 1 and not(borer.speed >0 and (speed_test_tile.name == "out-of-map" or speed_test_tile.name == "cave-walls")) then
+				borer.friction_modifier = 1
 			end
 		end
 	end
@@ -784,6 +814,7 @@ function borer_control()
 				end
 			end
 		end
+		machineBoring()
 	end
 end
 
