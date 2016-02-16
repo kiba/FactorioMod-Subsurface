@@ -653,8 +653,8 @@ function on_pre_mined_item(event)
 	elseif entity.name == "mini-borer" then
 		local mPos = entity["position"]
 		local count = 1
-		for i,e in pairs(global.borers) do
-			local pos = e["position"]
+		for i,m in pairs(global.borers) do
+			local pos = m["borer"]["position"]
 			if pos.x == mPos.x and pos.y == mPos.y then
 				break
 			end
@@ -703,7 +703,11 @@ function on_built_entity(event)
 		global.air_vents[string.format("%s@{%d,%d}", entity.surface.name, entity.position.x, entity.position.y)] = {entity = entity, active = false}
 		entity.operable = false
 	elseif entity.name == "mini-borer" then
-		table.insert(global.borers,entity)
+		local manager = {
+			["defuel"] = nil,
+			["borer"] = entity
+		}
+		table.insert(global.borers,manager)
 	end
 end
 
@@ -746,14 +750,24 @@ function clear_subsurface(_surface, _position, _digging_radius, _clearing_radius
 	return walls_destroyed
 end
 
+
+
 function borer_control()
- for i, e in pairs(global.borers) do
-		local fuel_tank = e.get_inventory(defines.inventory.fuel)
+	local count = 0
+	for i, m in pairs(global.borers) do
+		local borer = m["borer"]
+		local fuel_tank = borer.get_inventory(defines.inventory.fuel)
 		if fuel_tank[1].valid_for_read == true then
 		 	if fuel_tank[1].count > 0 then
-				e.speed = 1
-				game.player.print(tostring(e.get_item_count("coal")))
-				e.remove_item {name="coal",count = 1}
+				borer.speed = 1
+				local fuel_name = fuel_tank[1].name
+				local energy = FUELS[fuel_name]
+				if m["defuel"] == nil then
+					m["defuel"] = game.tick + (energy * 10)
+				elseif m["defuel"] < game.tick then
+					borer.remove_item {name=fuel_name,count = 1}
+					m["defuel"] = nil
+				end
 			end
 		end
 	end
