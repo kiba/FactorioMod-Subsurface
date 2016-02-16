@@ -137,6 +137,20 @@ function boring(function_name)
 	end
 end
 
+--[[Could go with the boring function, but without knowing how it all works, likely to mess up integration. For now, let duplicate the boring function of the player]]
+
+function machineBoring()
+	for i,m in pairs(global.borers) do
+		local borer = m["borer"]
+		for _,entity in ipairs(borer.surface.find_entities(get_area(borer.position,10))) do
+			if entity.type == "decorative" then
+				entity.destroy()
+			end
+		end
+	end
+end
+
+
 function pollution_moving(function_name)
 
 	for _,entitydata in pairs(global.air_vents) do
