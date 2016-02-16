@@ -7,3 +7,8 @@ max_pollution_move_passive = 1 -- the max amount of pollution that can be moved 
 max_apnea_time = 20*60
 apnea_threshold = 1000
 apnea_damage = 2.5
+
+FUELS = {
+  ["coal"] = 8,
+  ["raw-wood"] = 4,
+}
